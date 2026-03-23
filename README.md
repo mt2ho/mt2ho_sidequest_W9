@@ -12,7 +12,7 @@ Changes made by Lisa; original by Karen Cochrane and David Han
 
 ## Description
 
-## This goal of this sidequest is add a debug screen The objective of the game is to collect all the leaves, avoid, obstacles, and attack the boars.
+- This goal of this sidequest is add a debug screen. The objective of the game is to collect all the leaves, avoid, obstacles, and attack the monster. Press "`" to open the debug screen which allows you to toggle collisions, win conditions, invincibility, and candy probes.
 
 ## Learning Goals
 

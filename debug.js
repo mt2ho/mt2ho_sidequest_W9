@@ -68,7 +68,7 @@ class DebugMenu {
   constructor() {
     this.selected = 0;
     this.options = [
-      { label: "Show Boar Probes", key: "boarProbes" },
+      { label: "Show Monster Probes", key: "boarProbes" },
       { label: "Show Collision Boxes", key: "collisionBoxes" },
       { label: "Player Invincible", key: "playerInvincible" },
       { label: "Win Condition = 1", key: "winScoreOne" },
