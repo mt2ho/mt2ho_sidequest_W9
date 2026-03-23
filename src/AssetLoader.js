@@ -34,18 +34,6 @@ export async function loadAssets(levelPkg, tuningDoc) {
 
   const fontImg = await loadImageAsync("assets/bitmapFont.png");
 
-  // Letter images for title screen "ADVENTURE" sprites
-  const letterImages = {
-    A: await loadImageAsync("assets/letterA.png"),
-    D: await loadImageAsync("assets/letterD.png"),
-    V: await loadImageAsync("assets/letterV.png"),
-    E: await loadImageAsync("assets/letterE.png"),
-    N: await loadImageAsync("assets/letterN.png"),
-    T: await loadImageAsync("assets/letterT.png"),
-    U: await loadImageAsync("assets/letterU.png"),
-    R: await loadImageAsync("assets/letterR.png"),
-  };
-
   // Backgrounds (keys should match levels.json parallaxLayers[].key)
   // If levelPkg provides a parallax layer list with { key, src }, prefer that.
   // Otherwise fall back to the default 3-layer set.
@@ -103,7 +91,6 @@ export async function loadAssets(levelPkg, tuningDoc) {
     wallRImg,
 
     fontImg,
-    letterImages,
     backgrounds,
 
     playerAnis,

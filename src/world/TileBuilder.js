@@ -167,7 +167,5 @@ export function buildTilesAndGroups(level) {
   // Debug: fire group sprite count (removed console.log for production)
 
   // leaves overlap-only (boars pass through)
-  for (const s of level.leaf) {
-    s.removeColliders();
-  }
+  for (const s of level.leaf) s.removeColliders();
 }

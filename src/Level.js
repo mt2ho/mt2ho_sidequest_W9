@@ -28,11 +28,6 @@ import {
   rebuildBoarsFromSpawns,
 } from "./world/BoarSystem.js";
 import { maybeRedrawHUD, redrawHUD } from "./world/HUDRenderer.js";
-import {
-  getPlayerAttackRange,
-  pickFirstPlayerMeleeTarget,
-} from "./world/AttackHitResolver.js";
-import { EVENTS } from "./EventNames.js";
 
 export class Level {
   constructor(pkg, assets, opts = {}) {
@@ -108,17 +103,12 @@ export class Level {
     // Track if player was overlapping fire last frame and last invuln value
     this._playerWasInFire = false;
     this._playerLastInvuln = 0;
-
-    // Short grace period after restart to avoid stale overlap/contact carryover.
-    this._fireDamageGraceFrames = 0;
   }
 
   _installEventListeners() {
     if (!this.events) return;
     this._unsubs.push(
-      this.events.on(EVENTS.PLAYER_ATTACK_WINDOW, (info) =>
-        this._tryHitBoar(info),
-      ),
+      this.events.on("player:attackWindow", (info) => this._tryHitBoar(info)),
     );
   }
 
@@ -184,10 +174,6 @@ export class Level {
   }
 
   update({ input }) {
-    if (this._fireDamageGraceFrames > 0) {
-      this._fireDamageGraceFrames--;
-    }
-
     // --- Fire pit repeated damage logic ---
     const player = this.player;
     const playerCtrl = this.playerCtrl;
@@ -201,7 +187,6 @@ export class Level {
       }
       // If player is in fire, invuln just ended, and was in fire last frame, apply damage again
       if (
-        this._fireDamageGraceFrames === 0 &&
         inFire &&
         this._playerWasInFire &&
         player.invulnTimer === 0 &&
@@ -263,12 +248,6 @@ export class Level {
     // reset player entity/controller state
     this.playerCtrl.reset();
 
-    // Reset fire overlap state and suppress fire damage briefly so stale
-    // overlap/contact data from the death frame cannot damage on respawn.
-    this._playerWasInFire = false;
-    this._playerLastInvuln = 0;
-    this._fireDamageGraceFrames = 2;
-
     // respawn leaves (overlap-only)
     for (const item of this.leafSpawns) {
       const s = item.s;
@@ -295,7 +274,7 @@ export class Level {
     this._lastScore = this._lastHealth = this._lastMaxHealth = null;
     maybeRedrawHUD(this);
 
-    this.events?.emit(EVENTS.LEVEL_RESTARTED);
+    this.events?.emit("level:restarted");
   }
 
   // -----------------------
@@ -321,7 +300,6 @@ export class Level {
 
     // fire damage
     p.overlaps(this.fire, (playerSprite, fireSprite) => {
-      if (this._fireDamageGraceFrames > 0) return;
       this.playerCtrl.damageFromX(fireSprite.x);
     });
   }
@@ -386,7 +364,7 @@ export class Level {
     leafSprite.removeColliders();
 
     this.score++;
-    this.events?.emit(EVENTS.LEAF_COLLECTED, {
+    this.events?.emit("leaf:collected", {
       score: this.score,
       winScore: this.WIN_SCORE,
     });
@@ -401,7 +379,7 @@ export class Level {
       playerSprite.vel.x = 0;
       playerSprite.vel.y = 0;
 
-      this.events?.emit(EVENTS.LEVEL_WON, {
+      this.events?.emit("level:won", {
         score: this.score,
         winScore: winScore,
         elapsedMs: this.elapsedMs,
@@ -414,28 +392,29 @@ export class Level {
     if (!this.boar) return;
     if (this.player.attackHitThisSwing) return; // optional guard
 
-    const { rangeX, rangeY, verticalPad } = getPlayerAttackRange(this.tuning, {
-      rangeX: 20,
-      rangeY: 16,
-      verticalPad: 10,
-    });
+    const rangeX = Number(this.tuning.player?.attackRangeX ?? 20);
+    const rangeY = Number(this.tuning.player?.attackRangeY ?? 16);
 
-    const boar = pickFirstPlayerMeleeTarget({
-      attackInfo: { facing, x, y },
-      playerSprite: this.playerCtrl.sprite,
-      targets: this.boar,
-      rangeX,
-      rangeY,
-      verticalPad,
-      isTargetValid: (e) => !e.dead && !e.dying,
-    });
+    const playerFeetY = y + (this.playerCtrl.sprite?.h ?? 12) / 2;
 
-    if (!boar) return;
+    for (const e of this.boar) {
+      if (e.dead || e.dying) continue;
 
-    this._damageBoar(boar, facing);
+      const dx = e.x - x;
+      if (Math.sign(dx) !== facing) continue;
 
-    // latch "hit happened this swing" on the entity
-    this.player.markAttackHit();
+      // NOTE: e.w may be getter-only; reading is fine.
+      if (Math.abs(dx) > rangeX + (e.w ?? e.width ?? 18) / 2) continue;
+
+      const boarFeetY = e.y + (e.h ?? e.height ?? 12) / 2;
+      if (Math.abs(boarFeetY - playerFeetY) > rangeY + 10) continue;
+
+      this._damageBoar(e, facing);
+
+      // latch "hit happened this swing" on the entity
+      this.player.markAttackHit();
+      return;
+    }
   }
 
   _damageBoar(e, facingDir) {
@@ -449,7 +428,7 @@ export class Level {
     e.hp = Math.max(0, (e.hp ?? Number(this.tuning.boar?.stats?.hp ?? 3)) - 1);
     e.flashTimer = flashFrames;
 
-    this.events?.emit(EVENTS.BOAR_DAMAGED, { hp: e.hp, x: e.x, y: e.y });
+    this.events?.emit("boar:damaged", { hp: e.hp, x: e.x, y: e.y });
 
     if (e.hp <= 0) {
       // Match monolith: enter "dying" first, then "dead" once grounded in BoarSystem.
@@ -464,7 +443,7 @@ export class Level {
       // Actual death animation starts later inside BoarSystem when grounded.
       this._setAniFrame0Safe(e, "throwPose");
 
-      this.events?.emit(EVENTS.BOAR_DIED, { x: e.x, y: e.y });
+      this.events?.emit("boar:died", { x: e.x, y: e.y });
       return;
     }
 
@@ -492,7 +471,7 @@ export class Level {
   }
 
   _solids() {
-    const solids = {
+    return {
       ground: this.ground,
       groundDeep: this.groundDeep,
       platformsL: this.platformsL,
@@ -500,15 +479,6 @@ export class Level {
       wallsL: this.wallsL,
       wallsR: this.wallsR,
     };
-
-    // Optional additional solids (e.g., title-screen letters).
-    if (Array.isArray(this.extraSolidGroups)) {
-      this.extraSolidGroups.forEach((g, i) => {
-        solids[`extraSolid${i}`] = g;
-      });
-    }
-
-    return solids;
   }
 
   _fallResetIfNeeded() {

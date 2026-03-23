@@ -18,7 +18,6 @@
 // - main.js remains the VIEW/orchestration layer for rendering setup.
 
 import { EventBus } from "./EventBus.js";
-import { EVENTS } from "./EventNames.js";
 import { Level } from "./Level.js";
 import { HighScoreManager } from "./HighScoreManager.js";
 
@@ -102,14 +101,14 @@ export class Game {
     // WORLD flow listeners
     // -----------------------
     this._unsubs.push(
-      this.events.on(EVENTS.PLAYER_DIED, () => {
+      this.events.on("player:died", () => {
         this.lost = true;
       }),
     );
 
     // When the level is won, latch + submit time ONCE.
     this._unsubs.push(
-      this.events.on(EVENTS.LEVEL_WON, () => {
+      this.events.on("level:won", () => {
         this.won = true;
 
         // freeze the visible timer at win moment (Level should stop ticking too,
@@ -137,7 +136,7 @@ export class Game {
 
     // Clear terminal flags when the level restarts
     this._unsubs.push(
-      this.events.on(EVENTS.LEVEL_RESTARTED, () => {
+      this.events.on("level:restarted", () => {
         this.lost = false;
         this.won = false;
 
@@ -164,21 +163,21 @@ export class Game {
     // SYSTEM listeners (sound/debug)
     // -----------------------
     if (this.sound) {
-      const soundEventMap = {
-        [EVENTS.LEAF_COLLECTED]: "leafCollect",
-        [EVENTS.PLAYER_DAMAGED]: "receiveDamage",
-        [EVENTS.PLAYER_JUMPED]: "jump",
-        [EVENTS.PLAYER_DIED]: "die",
-        [EVENTS.LEVEL_WON]: "win",
-        [EVENTS.BOAR_DAMAGED]: "hitEnemy",
-        [EVENTS.LETTER_HIT]: "hitEnemy",
-      };
-
-      for (const [eventName, soundName] of Object.entries(soundEventMap)) {
-        this._unsubs.push(
-          this.events.on(eventName, () => this.sound.play(soundName)),
-        );
-      }
+      this._unsubs.push(
+        this.events.on("leaf:collected", () => this.sound.play("leaf")),
+      );
+      this._unsubs.push(
+        this.events.on("player:damaged", () => this.sound.play("hurt")),
+      );
+      this._unsubs.push(
+        this.events.on("player:died", () => this.sound.play("die")),
+      );
+      this._unsubs.push(
+        this.events.on("level:won", () => this.sound.play("win")),
+      );
+      this._unsubs.push(
+        this.events.on("boar:damaged", () => this.sound.play("hit")),
+      );
     }
 
     if (this.debug) {
@@ -187,22 +186,21 @@ export class Game {
   }
 
   update() {
-    // Input boundary is centralized in InputManager.
-    // If no input manager is injected, use a neutral snapshot.
-    const inputSnap = {
-      left: false,
-      right: false,
-      jumpPressed: false,
-      attackPressed: false,
-      restartPressed: false,
-      debugTogglePressed: false,
-      enterPressed: false,
-      ePressed: false,
-      vPressed: false,
-      typedChar: null,
-      backspacePressed: false,
-      ...(this.input ? (this.input.update(), this.input.input) : null),
-    };
+    let inputSnap = null;
+
+    if (this.input) {
+      this.input.update();
+      inputSnap = this.input.input;
+    } else {
+      inputSnap = {
+        left: kb.pressing("left"),
+        right: kb.pressing("right"),
+        jumpPressed: kb.presses("up"),
+        attackPressed: kb.presses("space"),
+        restartPressed: kb.presses("r"),
+        debugTogglePressed: kb.presses("t"),
+      };
+    }
 
     if (inputSnap?.debugTogglePressed && this.debug) {
       this.debug.toggle();

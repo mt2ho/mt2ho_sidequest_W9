@@ -2,55 +2,6 @@
   "schemaVersion": 1,
   "levels": [
     {
-      "id": "title_screen",
-      "name": "Title Screen",
-
-      "tiles": {
-        "tileW": 24,
-        "tileH": 24,
-        "frameW": 32,
-        "frameH": 32
-      },
-
-      "tilemap": [
-        "                                        ",
-        "                                        ",
-        "                                        ",
-        "                                        ",
-        "                                        ",
-        "                                        ",
-        "                                        ",
-        "                                        ",
-        "        LR                              ",
-        "     Lggd]    LR           LgR  LgR [dd]",
-        "s Lgggddd]   LggR LR  [ggggddd]     [dd]",
-        "Lggggggggggggggggggggggggggggggggggggggg",
-        "dddddddddddddddddddddddddddddddddddddddd"
-      ],
-
-      "rules": {},
-
-      "winScore": 9999,
-      "gravity": 10,
-      "fallResetMarginTiles": 3,
-
-      "backupPlayerStart": { "x": 32, "y": 240 },
-
-      "lockCamera": true,
-      "view": {
-        "viewW": 341,
-        "viewH": 192,
-        "w": 341,
-        "h": 192,
-        "background": [69, 61, 79],
-        "cameraLerp": 0.1,
-
-        "parallax": [{ "img": "assets/backgroundStatic.png", "speed": 0 }]
-      },
-
-      "overrides": {}
-    },
-    {
       "id": "ffa_level1",
       "name": "Fox's Forest Adventure - Level 1",
 

@@ -10,8 +10,6 @@
 // - Does NOT own sprites (PlayerEntity owns sprites)
 // - Does NOT own camera/HUD (VIEW)
 
-import { EVENTS } from "../EventNames.js";
-
 export class PlayerController {
   constructor(playerEntity, opts = {}) {
     this.player = playerEntity;
@@ -43,10 +41,7 @@ export class PlayerController {
     if (!p.dead && p.pendingDeath && grounded) {
       p.dead = true;
       p.pendingDeath = false;
-      this.events?.emit(EVENTS.PLAYER_DIED, {
-        health: p.health,
-        maxHealth: p.maxHealth,
-      });
+      this.events?.emit("player:died", { health: p.health, maxHealth: p.maxHealth });
     }
 
     // if dead or won, freeze horizontal control and just animate
@@ -61,15 +56,9 @@ export class PlayerController {
     // ATTACK start
     // -----------------------
     const wantAttack = input?.attackPressed;
-    if (
-      p.knockTimer === 0 &&
-      !p.pendingDeath &&
-      grounded &&
-      !p.attacking &&
-      wantAttack
-    ) {
+    if (p.knockTimer === 0 && !p.pendingDeath && grounded && !p.attacking && wantAttack) {
       p.startAttack();
-      this.events?.emit(EVENTS.PLAYER_ATTACKED, {});
+      this.events?.emit("player:attacked", {});
     }
 
     // -----------------------
@@ -78,7 +67,7 @@ export class PlayerController {
     const wantJump = input?.jumpPressed;
     if (p.knockTimer === 0 && !p.pendingDeath && grounded && wantJump) {
       p.jump();
-      this.events?.emit(EVENTS.PLAYER_JUMPED, {});
+      this.events?.emit("player:jumped", {});
     }
 
     // -----------------------
@@ -102,7 +91,7 @@ export class PlayerController {
 
       // emit ONCE when the window opens (Level can handle boar hits that frame)
       if (!p.attackHitThisSwing && p.attackFrameCounter === p.ATTACK_START) {
-        this.events?.emit(EVENTS.PLAYER_ATTACK_WINDOW, {
+        this.events?.emit("player:attackWindow", {
           frame: p.attackFrameCounter,
           facing: p.sprite.mirror.x ? -1 : 1,
           x: p.sprite.x,
@@ -129,7 +118,7 @@ export class PlayerController {
     const p = this.player;
     const didDamage = p.takeDamageFromX(sourceX);
     if (didDamage) {
-      this.events?.emit(EVENTS.PLAYER_DAMAGED, {
+      this.events?.emit("player:damaged", {
         amount: 1,
         health: p.health,
         maxHealth: p.maxHealth,

@@ -185,9 +185,7 @@ export function cacheBoarSpawns(level) {
 
 export function clearBoars(level) {
   if (!level.boar) return;
-  // Iterate a snapshot because removing from a live Group while iterating
-  // can skip entries and leave stale boars behind after restart.
-  for (const e of [...level.boar]) {
+  for (const e of level.boar) {
     e.footProbe?.remove?.();
     e.frontProbe?.remove?.();
     e.groundProbe?.remove?.();
@@ -257,7 +255,6 @@ export function rebuildBoarsFromSpawns(level) {
     e.holdY = e.y;
 
     e.mirror.x = e.dir === -1;
-    e._lvlInit = true;
 
     level._setAniSafe?.(e, "run");
     level.boar.add(e);
@@ -295,12 +292,6 @@ export function updateBoars(level) {
 
   for (const old of boarsSnapshot) {
     let e = old;
-
-    // Defensive recovery: if probes were lost (e.g., from stale sprites),
-    // reattach so edge/hazard logic stays functional.
-    if (!e.frontProbe || !e.footProbe || !e.groundProbe) {
-      attachBoarProbes(level, e);
-    }
 
     // -----------------------------
     // One-time init for Tiles() boars
@@ -389,7 +380,7 @@ export function updateBoars(level) {
 
     e.tint = e.flashTimer > 0 ? "#ff5050" : "#ffffff";
 
-    const grounded = boarGrounded(level, e) || boarTouchingSolid(level, e);
+    const grounded = boarGrounded(level, e);
     const frontHitsHazard = frontProbeHitsHazard(level, e); // used even when airborne
     // physical collision check: sometimes the probe misses when the boar
     // is partly embedded in the wall. using colliding() gives us the raw
@@ -690,15 +681,6 @@ function boarGrounded(level, e) {
     p.overlapping(level.groundDeep) ||
     p.overlapping(level.platformsL) ||
     p.overlapping(level.platformsR)
-  );
-}
-
-function boarTouchingSolid(level, e) {
-  return (
-    (level.ground && e.colliding(level.ground)) ||
-    (level.groundDeep && e.colliding(level.groundDeep)) ||
-    (level.platformsL && e.colliding(level.platformsL)) ||
-    (level.platformsR && e.colliding(level.platformsR))
   );
 }
 

@@ -25,16 +25,9 @@
     "attack": {
       "rangeX": 20,
       "rangeY": 16,
-      "verticalPad": 10,
       "activeFrames": [4, 8],
       "endFrame": 12,
-      "lockToGround": true,
-      "titleLetterHit": {
-        "knockX": 4,
-        "knockY": 5,
-        "rotation": 15,
-        "life": 30
-      }
+      "lockToGround": true
     },
 
     "damage": {

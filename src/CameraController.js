@@ -24,7 +24,6 @@ export class CameraController {
     this.target = null;
 
     this.lerp = Number(this.view.cameraLerp ?? 0.1);
-    this.lockCamera = pkg.level?.lockCamera ?? false;
 
     // internal camera state (so we can smooth + reset)
     this.cx = undefined;
@@ -43,44 +42,12 @@ export class CameraController {
   update({ viewW, viewH, levelW, levelH }) {
     if (!this.target) return;
 
-    // If camera is locked, pick a fixed camera position once from the
-    // initial target location (spawn) and keep it there.
-    if (this.lockCamera) {
-      if (this.cx === undefined || this.cy === undefined) {
-        const tileW = this.pkg.tiles?.tileW ?? 24;
-        const tileH = this.pkg.tiles?.tileH ?? 24;
-
-        const tx = constrain(
-          this.target.x,
-          viewW / 2,
-          levelW - viewW / 2 - tileW / 2,
-        );
-        const ty = constrain(
-          this.target.y,
-          viewH / 2 - tileH * 2,
-          levelH - viewH / 2 - tileH,
-        );
-
-        this.cx = Math.round(tx);
-        this.cy = Math.round(ty);
-      }
-      return;
-    }
-
     // match monolith clamp behavior (slight vertical bias)
     const tileW = this.pkg.tiles?.tileW ?? 24;
     const tileH = this.pkg.tiles?.tileH ?? 24;
 
-    const tx = constrain(
-      this.target.x,
-      viewW / 2,
-      levelW - viewW / 2 - tileW / 2,
-    );
-    const ty = constrain(
-      this.target.y,
-      viewH / 2 - tileH * 2,
-      levelH - viewH / 2 - tileH,
-    );
+    const tx = constrain(this.target.x, viewW / 2, levelW - viewW / 2 - tileW / 2);
+    const ty = constrain(this.target.y, viewH / 2 - tileH * 2, levelH - viewH / 2 - tileH);
 
     const nextX = Math.round(lerp(this.cx ?? tx, tx, this.lerp));
     const nextY = Math.round(lerp(this.cy ?? ty, ty, this.lerp));
