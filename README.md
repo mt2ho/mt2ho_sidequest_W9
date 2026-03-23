@@ -12,17 +12,14 @@ Changes made by Lisa; original by Karen Cochrane and David Han
 
 ## Description
 
-This goal of this sidequest is to change the sprite sheets for the player, enemy, collectible items, and the overall feel of the levels. The objective of the game is to collect all the leaves, avoid, obstacles, and attack the boars. This code loaded the sound effects for jumping, attacking, recieving damage and music. It also includes a trail effect behind the fox when it moves to create a motion effect.
-
----
+## This goal of this sidequest is add a debug screen The objective of the game is to collect all the leaves, avoid, obstacles, and attack the boars.
 
 ## Learning Goals
 
 Learning Goals:
 
-- understanding code structure and files of a full game
-- Understanding collision of the player with environment and entities
-- understanding bounds of camera and camera clamping/lerp
+- understanding how to add a debug screen and why it is important
+- Understanding structure of game such as adding audio, onboarding
 - Be able to understand how each element interact with eachother
 
 ---

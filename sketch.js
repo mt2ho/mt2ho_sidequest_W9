@@ -26,6 +26,10 @@
 let player, sensor;
 let playerImg;
 
+// --- DEBUG OVERLAY ---
+let debugMenu;
+let debugOverlay;
+
 // --- PLAYER TRAIL EFFECT ---
 let trailPositions = [];
 let trailTimer = 0;
@@ -266,6 +270,10 @@ function setup() {
 
   makeWorld();
 
+  // --- DEBUG OVERLAY ---
+  debugMenu = new DebugMenu();
+  debugOverlay = new DebugOverlay();
+
   // Leaves should be overlap-only (boars pass through, player collects)
   for (const s of candy) s.removeColliders();
   candySpawns = [];
@@ -282,11 +290,17 @@ function setup() {
 function draw() {
   background(69, 61, 79);
 
-  // 1) decide boar vel/turns using probes
-  updateBoars();
+  const debugPaused = debugState.menuOpen;
 
-  // 2) then let physics apply vel.x / gravity
-  world.step();
+  updateAllBoarProbeVisibility();
+
+  if (!debugPaused) {
+    // 1) decide boar vel/turns using probes
+    updateBoars();
+
+    // 2) then let physics apply vel.x / gravity
+    world.step();
+  }
 
   // --- CAMERA ---
   camera.width = VIEWW;
@@ -305,171 +319,172 @@ function draw() {
   // --- PLAYER GROUNDED CHECK ---
   const grounded = isPlayerGrounded();
 
-  // --- PLAYER INPUT (disabled during knockback / death) ---
-  // ATTACK
-  if (
-    !dead &&
-    !won &&
-    knockTimer === 0 &&
-    !pendingDeath &&
-    grounded &&
-    !attacking &&
-    kb.presses("space")
-  ) {
-    attackHitThisSwing = false;
-    attacking = true;
-    attackHitThisSwing = false;
-    attackFrameCounter = 0;
-    player.vel.x = 0;
-    player.ani.frame = 0;
-    player.ani = "attack";
-    player.ani.play();
-    // --- PLAY SWING SOUND --//
-    if (swing) swing.play();
-  }
-
-  // JUMP
-  if (
-    !dead &&
-    !won &&
-    knockTimer === 0 &&
-    !pendingDeath &&
-    grounded &&
-    kb.presses("up")
-  ) {
-    player.vel.y = -1 * PLAYER_JUMP;
-
-    if (jump) jump.play();
-  }
-
-  // --- PLAYER STATE / ANIMATION ---
-  if (!dead && knockTimer > 0) {
-    player.ani = "hurtPose";
-    player.ani.frame = 1;
-  } else if (!dead && pendingDeath) {
-    player.ani = "hurtPose";
-    player.ani.frame = 1;
-  } else if (!dead && attacking) {
-    attackFrameCounter++;
-
+  if (!debugPaused) {
+    // --- PLAYER INPUT (disabled during knockback / death) ---
+    // ATTACK
     if (
-      !attackHitThisSwing &&
-      attackFrameCounter >= 4 &&
-      attackFrameCounter <= 8
+      !dead &&
+      !won &&
+      knockTimer === 0 &&
+      !pendingDeath &&
+      grounded &&
+      !attacking &&
+      kb.presses("space")
     ) {
-      tryHitBoar();
-    }
-
-    if (attackFrameCounter > 12) {
-      attacking = false;
-      attackFrameCounter = 0;
       attackHitThisSwing = false;
+      attacking = true;
+      attackHitThisSwing = false;
+      attackFrameCounter = 0;
+      player.vel.x = 0;
+      player.ani.frame = 0;
+      player.ani = "attack";
+      player.ani.play();
+      // --- PLAY SWING SOUND --//
+      if (swing) swing.play();
     }
-  } else if (!dead && !grounded) {
-    player.ani = "jump";
-    player.ani.frame = player.vel.y < 0 ? 0 : 1;
-  } else if (!dead) {
-    player.ani = kb.pressing("left") || kb.pressing("right") ? "run" : "idle";
-  }
 
-  // --- PLAYER MOVEMENT ---
-  if (dead || won) {
-    player.vel.x = 0;
-  } else if (knockTimer > 0) {
-    // no control during knockback
-  } else if (pendingDeath) {
-    player.vel.x = 0;
-  } else if (!attacking) {
-    player.vel.x = 0;
-    if (kb.pressing("left")) {
-      player.vel.x = -1.5;
-      player.mirror.x = true;
-    } else if (kb.pressing("right")) {
-      player.vel.x = 1.5;
-      player.mirror.x = false;
+    // JUMP
+    if (
+      !dead &&
+      !won &&
+      knockTimer === 0 &&
+      !pendingDeath &&
+      grounded &&
+      kb.presses("up")
+    ) {
+      player.vel.y = -1 * PLAYER_JUMP;
+
+      if (jump) jump.play();
+    }
+
+    // --- PLAYER STATE / ANIMATION ---
+    if (!dead && knockTimer > 0) {
+      player.ani = "hurtPose";
+      player.ani.frame = 1;
+    } else if (!dead && pendingDeath) {
+      player.ani = "hurtPose";
+      player.ani.frame = 1;
+    } else if (!dead && attacking) {
+      attackFrameCounter++;
+
+      if (
+        !attackHitThisSwing &&
+        attackFrameCounter >= 4 &&
+        attackFrameCounter <= 8
+      ) {
+        tryHitBoar();
+      }
+
+      if (attackFrameCounter > 12) {
+        attacking = false;
+        attackFrameCounter = 0;
+        attackHitThisSwing = false;
+      }
+    } else if (!dead && !grounded) {
+      player.ani = "jump";
+      player.ani.frame = player.vel.y < 0 ? 0 : 1;
+    } else if (!dead) {
+      player.ani = kb.pressing("left") || kb.pressing("right") ? "run" : "idle";
+    }
+
+    // --- PLAYER MOVEMENT ---
+    if (dead || won) {
+      player.vel.x = 0;
+    } else if (knockTimer > 0) {
+      // no control during knockback
+    } else if (pendingDeath) {
+      player.vel.x = 0;
+    } else if (!attacking) {
+      player.vel.x = 0;
+      if (kb.pressing("left")) {
+        player.vel.x = -1.5;
+        player.mirror.x = true;
+      } else if (kb.pressing("right")) {
+        player.vel.x = 1.5;
+        player.mirror.x = false;
+      }
+    }
+
+    // keep player in world bounds
+    player.x = constrain(player.x, FRAME_W / 2, LEVELW - FRAME_W / 2);
+
+    // --- PARALLAX BACKGROUNDS (screen space) ---
+    camera.off();
+    imageMode(CORNER);
+    drawingContext.imageSmoothingEnabled = false;
+
+    for (const layer of bgLayers) {
+      const img = layer.img;
+      const w = img.width;
+
+      let x = Math.round((-camera.x * layer.speed) % w);
+      if (x > 0) x -= w;
+
+      for (let tx = x; tx < VIEWW + w; tx += w) image(img, tx, 0);
+    }
+
+    camera.on();
+
+    // --- FALL RESET (alive only) ---
+    if (!dead && player.y > LEVELH + TILE_H * 3) {
+      player.x = FRAME_W;
+      player.y = PLAYER_START_Y;
+      player.vel.x = 0;
+      player.vel.y = 0;
+    }
+
+    // --- TIMERS ---
+    if (invulnTimer > 0) invulnTimer--;
+    if (knockTimer > 0) knockTimer--;
+
+    // --- UPDATE PLAYER TRAIL ---
+    trailTimer++;
+
+    if (trailTimer % 2 === 0) {
+      // every 2 frames
+      trailPositions.push({
+        x: player.x,
+        y: player.y,
+      });
+
+      // keep only last 6 positions
+      if (trailPositions.length > 6) {
+        trailPositions.shift();
+      }
+    }
+
+    // --- ENTER DEAD (only once, after landing) ---
+    if (!dead && pendingDeath && knockTimer === 0 && grounded) {
+      dead = true;
+      pendingDeath = false;
+      deathStarted = false;
+    }
+
+    // start death animation once
+    if (dead && !deathStarted) {
+      deathStarted = true;
+
+      player.tint = "#ffffff";
+      player.vel.x = 0;
+      player.vel.y = 0;
+
+      player.ani = "death";
+      player.ani.frame = 0;
+
+      deathFrameTimer = 0;
+    }
+
+    // advance death frames manually (non-looping)
+    if (dead) {
+      const frames = playerAnis.death.frames;
+      const delayFrames = playerAnis.death.frameDelay;
+      const msPerFrame = (delayFrames * 1000) / 60;
+
+      deathFrameTimer += deltaTime;
+      const f = Math.floor(deathFrameTimer / msPerFrame);
+      player.ani.frame = Math.min(frames - 1, f);
     }
   }
-
-  // keep player in world bounds
-  player.x = constrain(player.x, FRAME_W / 2, LEVELW - FRAME_W / 2);
-
-  // --- PARALLAX BACKGROUNDS (screen space) ---
-  camera.off();
-  imageMode(CORNER);
-  drawingContext.imageSmoothingEnabled = false;
-
-  for (const layer of bgLayers) {
-    const img = layer.img;
-    const w = img.width;
-
-    let x = Math.round((-camera.x * layer.speed) % w);
-    if (x > 0) x -= w;
-
-    for (let tx = x; tx < VIEWW + w; tx += w) image(img, tx, 0);
-  }
-
-  camera.on();
-
-  // --- FALL RESET (alive only) ---
-  if (!dead && player.y > LEVELH + TILE_H * 3) {
-    player.x = FRAME_W;
-    player.y = PLAYER_START_Y;
-    player.vel.x = 0;
-    player.vel.y = 0;
-  }
-
-  // --- TIMERS ---
-  if (invulnTimer > 0) invulnTimer--;
-  if (knockTimer > 0) knockTimer--;
-
-  // --- UPDATE PLAYER TRAIL ---
-  trailTimer++;
-
-  if (trailTimer % 2 === 0) {
-    // every 2 frames
-    trailPositions.push({
-      x: player.x,
-      y: player.y,
-    });
-
-    // keep only last 6 positions
-    if (trailPositions.length > 6) {
-      trailPositions.shift();
-    }
-  }
-
-  // --- ENTER DEAD (only once, after landing) ---
-  if (!dead && pendingDeath && knockTimer === 0 && grounded) {
-    dead = true;
-    pendingDeath = false;
-    deathStarted = false;
-  }
-
-  // start death animation once
-  if (dead && !deathStarted) {
-    deathStarted = true;
-
-    player.tint = "#ffffff";
-    player.vel.x = 0;
-    player.vel.y = 0;
-
-    player.ani = "death";
-    player.ani.frame = 0;
-
-    deathFrameTimer = 0;
-  }
-
-  // advance death frames manually (non-looping)
-  if (dead) {
-    const frames = playerAnis.death.frames;
-    const delayFrames = playerAnis.death.frameDelay;
-    const msPerFrame = (delayFrames * 1000) / 60;
-
-    deathFrameTimer += deltaTime;
-    const f = Math.floor(deathFrameTimer / msPerFrame);
-    player.ani.frame = Math.min(frames - 1, f);
-  }
-
   // --- RENDER PIXEL SNAP (render-only, restores after draw) ---
   const px = player.x,
     py = player.y;
@@ -494,6 +509,7 @@ function draw() {
   }
 
   allSprites.draw();
+  drawCollisionDebug();
 
   // --- DRAW PLAYER TRAIL ---
   push();
@@ -537,8 +553,33 @@ function draw() {
   if (dead) drawDeathOverlay();
   if (won) drawWinOverlay();
 
-  // accept R to restart the game if player wins or dies
-  if ((dead || won) && kb.presses("r")) restartGame();
+  camera.off();
+
+  push();
+  textFont("monospace");
+  fill("white");
+  strokeWeight(2);
+
+  stroke("black");
+  textSize(9);
+  textAlign(LEFT, TOP);
+  text('PRESS "`" TO OPEN DEBUG', 6, 18);
+  pop();
+
+  camera.on();
+  debugOverlay.draw({
+    score,
+    health,
+    maxHealth,
+    playerX: player.x,
+    playerY: player.y,
+    grounded,
+    dead,
+    won,
+    invulnTimer,
+  });
+
+  debugMenu.draw();
 }
 
 function applyIntegerScale() {
@@ -601,7 +642,14 @@ function redrawHUD() {
   hudGfx.drawingContext.imageSmoothingEnabled = false;
   hudGfx.imageMode(CORNER);
 
-  drawOutlinedTextToGfx(hudGfx, `RESCUED ${score}/15`, 6, 6, "#ffdc00");
+  const targetWinScore = debugState.winScoreOne ? 1 : WIN_SCORE;
+  drawOutlinedTextToGfx(
+    hudGfx,
+    `RESCUED ${score}/${targetWinScore}`,
+    6,
+    6,
+    "#ffdc00",
+  );
 
   const heartChar = "~";
   const heartX = 200;
@@ -633,18 +681,20 @@ function rescueCandy(player, candy) {
   candy.removeColliders();
   score++;
   if (candyCollect) candyCollect.play();
-  // win condition
-  if (score >= WIN_SCORE) {
+
+  const targetWinScore = debugState.winScoreOne ? 1 : WIN_SCORE;
+
+  if (score >= targetWinScore) {
     won = true;
-    // optional: freeze player immediately
     player.vel.x = 0;
     player.vel.y = 0;
+    debugLog("Win triggered");
   }
 }
 
 // --- DAMAGE FROM FIRE ---
 function takeDamageFromFire(player, fire) {
-  if (invulnTimer > 0 || dead) return;
+  if (debugState.playerInvincible || invulnTimer > 0 || dead) return;
 
   health = max(0, health - 1);
   if (receiveDamage) receiveDamage.play();
@@ -660,12 +710,14 @@ function takeDamageFromFire(player, fire) {
 
   attacking = false;
   attackFrameCounter = 0;
+
+  debugLog("Player hit by fire");
 }
 
 // --- BOAR: HIT PLAYER ---
 function playerHitByBoar(player, e) {
   if (e.dying || e.dead) return;
-  if (invulnTimer > 0 || dead) return;
+  if (debugState.playerInvincible || invulnTimer > 0 || dead) return;
 
   health = max(0, health - 1);
 
@@ -681,6 +733,53 @@ function playerHitByBoar(player, e) {
 
   attacking = false;
   attackFrameCounter = 0;
+  debugLog("Player hit by boar");
+}
+
+function updateAllBoarProbeVisibility() {
+  for (const e of boar) {
+    if (e.footProbe) e.footProbe.visible = debugState.boarProbes;
+    if (e.frontProbe) e.frontProbe.visible = debugState.boarProbes;
+    if (e.groundProbe) e.groundProbe.visible = debugState.boarProbes;
+  }
+}
+
+function drawCollisionDebug() {
+  if (!debugState.collisionBoxes) return;
+
+  camera.off();
+  push();
+
+  noFill();
+  stroke("#00ff00");
+  strokeWeight(1);
+
+  const camLeft = camera.x - VIEWW / 2;
+  const camTop = camera.y - VIEWH / 2;
+
+  function drawBox(s) {
+    if (!s || s.removed) return;
+    rect(
+      Math.round(s.x - s.w / 2 - camLeft),
+      Math.round(s.y - s.h / 2 - camTop),
+      Math.round(s.w),
+      Math.round(s.h),
+    );
+  }
+
+  drawBox(player);
+  drawBox(sensor);
+
+  for (const e of boar) drawBox(e);
+  for (const c of candy) if (c.visible) drawBox(c);
+  for (const f of fire) drawBox(f);
+
+  pop();
+  camera.on();
+}
+
+function debugLog(msg) {
+  if (debugOverlay) debugOverlay.log(msg);
 }
 
 // --- PLAYER ATTACK -> BOAR ---
@@ -1194,6 +1293,8 @@ function restartGame() {
   player.overlaps(boar, playerHitByBoar);
 
   lastScore = lastHealth = lastMaxHealth = null;
+  updateAllBoarProbeVisibility();
+  debugLog("Game restarted");
 }
 
 function makeWorld() {
@@ -1364,5 +1465,35 @@ function keyPressed() {
   if (music && !music.isPlaying()) {
     music.setVolume(0.4);
     music.loop();
+  }
+
+  if (key === "`") {
+    debugMenu.toggle();
+    debugLog(debugState.menuOpen ? "Debug menu opened" : "Debug menu closed");
+    return false;
+  }
+
+  if (key === "o" || key === "O") {
+    debugOverlay.toggle();
+    debugLog(
+      debugState.overlayOpen ? "Debug overlay opened" : "Debug overlay closed",
+    );
+    return false;
+  }
+
+  if (debugMenu.enabled) {
+    const pressedKey = keyCode === ENTER ? "Enter" : key;
+    const used = debugMenu.handleInput(pressedKey);
+
+    if (used) {
+      const opt = debugMenu.options[debugMenu.selected];
+      debugLog(`${opt.label}: ${debugState[opt.key] ? "ON" : "OFF"}`);
+      return false;
+    }
+  }
+
+  if ((dead || won) && (key === "r" || key === "R")) {
+    restartGame();
+    return false;
   }
 }
