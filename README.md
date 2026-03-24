@@ -1,6 +1,6 @@
 ## Project Title
 
-GBDA302 Sidequest W6: Fox Platformer
+GBDA302 Sidequest W9: Corgi Platformer
 
 ---
 
