@@ -18,7 +18,7 @@ Changes made by Lisa; original by Karen Cochrane and David Han
 
 Learning Goals:
 
-- understanding how to add a debug screen and why it is important
+- understanding how to add a debug screen of different features and why it is important
 - Understanding structure of game such as adding audio, onboarding
 - Be able to understand how each element interact with eachother
 
